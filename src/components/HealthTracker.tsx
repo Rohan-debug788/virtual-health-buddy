@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const HealthTracker: React.FC = () => {
   const [symptoms, setSymptoms] = useState('');
-  const [healthTips, setHealthTips] = useState<string[]>([]);
+  const [healthData, setHealthData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -11,17 +11,21 @@ const HealthTracker: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('BOLT_AI_API_ENDPOINT', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Provide health tips for: ${symptoms}` }),
-      });
-
+      const response = await fetch('/SymptomsOutput.json');
       const data = await response.json();
-      setHealthTips(data.tips || ['No tips available.']);
+
+      // Filter based on user input matching any name, text, or laytext field
+      const filteredData = data.filter((item: any) =>
+        [item.name, item.text, item.laytext]
+          .join(' ')
+          .toLowerCase()
+          .includes(symptoms.toLowerCase())
+      );
+
+      setHealthData(filteredData);
     } catch (error) {
-      console.error('Error fetching health tips:', error);
-      setHealthTips(['Failed to fetch health tips.']);
+      console.error('Error fetching health data:', error);
+      setHealthData([]);
     }
     setLoading(false);
   };
@@ -33,7 +37,7 @@ const HealthTracker: React.FC = () => {
         <textarea
           className="w-full p-2 border rounded"
           rows={4}
-          placeholder="Describe your symptoms..."
+          placeholder="Describe your symptoms or health concern..."
           value={symptoms}
           onChange={(e) => setSymptoms(e.target.value)}
         ></textarea>
@@ -42,19 +46,23 @@ const HealthTracker: React.FC = () => {
           className="w-full bg-blue-500 text-white py-2 px-4 rounded mt-2"
           disabled={loading}
         >
-          {loading ? 'Getting Tips...' : 'Get Health Tips'}
+          {loading ? 'Fetching data...' : 'Get Health Info'}
         </button>
       </form>
 
       <div>
-        <h3 className="text-xl font-semibold mb-2">Health Tips:</h3>
-        <ul className="list-disc pl-5">
-          {healthTips.map((tip, index) => (
-            <li key={index} className="mb-1">
-              {tip}
-            </li>
-          ))}
-        </ul>
+        <h3 className="text-xl font-semibold mb-2">Matching Results:</h3>
+        {healthData.length ? (
+          <ul className="list-disc pl-5">
+            {healthData.map((item, index) => (
+              <li key={index} className="mb-2">
+                <strong>{item.name}</strong>: {item.laytext || item.text}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No relevant data found.</p>
+        )}
       </div>
     </div>
   );
